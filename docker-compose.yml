@@ -1,0 +1,98 @@
+version: "3.3"
+
+volumes:
+  pg-data:
+  gr_data:
+
+
+services:
+  grafana:
+    image: grafana/grafana:6.1.6
+    environment:
+      GF_SECURITY_ADMIN_USER: 'admin'
+      GF_SECURITY_ADMIN_PASSWORD: 'admin'
+      GF_USERS_ALLOW_SIGN_UP: 'true'
+      GF_LOG_LEVEL: 'debug'
+    ports:
+      - 7000:3000
+    volumes:
+      - gr_data:/var/lib/grafana:rw
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+    - 9090:9090
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  traefik:
+    image: "traefik:v2.3"
+    command:
+      - --entrypoints.web.address=:80
+      - --providers.docker
+      - --api.insecure
+      - --accesslog=true
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  imgstorage:
+    image: safe:v0.1
+    ports:
+      - 3000:3000
+
+  database:
+    image: postgres
+    environment:
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: docker
+    ports:
+      - 5432:5432
+
+  webapp_1:
+    image: flaskapp:v0.1
+    environment:
+      - PSQL_DB_NAME=bycrent
+      - PSQL_DB_HOST=database
+      - PSQL_DB_PORT=5432
+      - PSQL_DB_USER=postgres
+      - PSQL_DB_PSWD=docker
+      - IMG_STORAGE_URL=http://imgstorage:3000/uploads/
+    restart: on-failure:5
+    labels:
+      - "traefik.http.routers.webapp.rule=PathPrefix(`/`)"
+      - "traefik.http.services.webapp.loadbalancer.server.port=8000"
+
+  webapp_2:
+    image: flaskapp:v0.1
+    environment:
+      - PSQL_DB_NAME=bycrent
+      - PSQL_DB_HOST=database
+      - PSQL_DB_PORT=5432
+      - PSQL_DB_USER=postgres
+      - PSQL_DB_PSWD=docker
+      - IMG_STORAGE_URL=http://imgstorage:3000/uploads/
+    restart: on-failure:5
+    labels:
+      - "traefik.http.routers.webapp.rule=PathPrefix(`/`)"
+      - "traefik.http.services.webapp.loadbalancer.server.port=8000"
+ 
+  webapp_3:
+    image: flaskapp:v0.1
+    environment:
+      - PSQL_DB_NAME=bycrent
+      - PSQL_DB_HOST=database
+      - PSQL_DB_PORT=5432
+      - PSQL_DB_USER=postgres
+      - PSQL_DB_PSWD=docker
+      - IMG_STORAGE_URL=http://imgstorage:3000/uploads/
+    restart: on-failure:5
+    labels:
+      - "traefik.http.routers.webapp.rule=PathPrefix(`/`)"
+      - "traefik.http.services.webapp.loadbalancer.server.port=8000"
